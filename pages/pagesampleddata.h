@@ -39,6 +39,7 @@ public:
 
     VescInterface *vesc() const;
     void setVesc(VescInterface *vesc);
+    void data2Cvs(QFile* file);
 
 private slots:
     void timerSlot();

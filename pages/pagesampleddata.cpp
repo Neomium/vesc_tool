@@ -763,6 +763,41 @@ void PageSampledData::on_plotModeBox_currentIndexChanged(int index)
     ui->currentStack->setCurrentIndex(index == 2 ? 1 : 0);
 }
 
+void PageSampledData::data2Cvs(QFile* file)
+{
+    QTextStream stream(file);
+    //stream.setCodec("UTF-8");
+
+    // Generate Time axis
+    QVector<double> timeVec;
+    timeVec.resize(fSwVector.size());
+    double prev_t = 0.0;
+    for (int i = 0;i < timeVec.size();i++) {
+        timeVec[i] = prev_t;
+        prev_t += 1.0 / fSwVector[i];
+    }
+
+    stream << "T;I1;I2;I3;V1;V2;V3;I_tot;V_zero;Phase\n";
+
+    for (int i = 0;i < curr1Vector.size();i++) {
+        stream << timeVec.at(i) << ";";
+        stream << curr1Vector.at(i) << ";";
+        stream << curr2Vector.at(i) << ";";
+        stream << curr3Vector.at(i) << ";";
+        stream << ph1Vector.at(i) << ";";
+        stream << ph2Vector.at(i) << ";";
+        stream << ph3Vector.at(i) << ";";
+        stream << currTotVector.at(i) << ";";
+        stream << vZeroVector.at(i) << ";";
+        stream << (double)((quint8)phaseArray.at(i)) / 250.0 * 360.0 << ";";
+
+        if (i < (curr1Vector.size() - 1)) {
+            stream << "\n";
+        }
+    }
+
+}
+
 void PageSampledData::on_saveDataButton_clicked()
 {
     QString dirPath = QSettings().value("pagesampleddata/lastdir", "").toString();
@@ -785,37 +820,7 @@ void PageSampledData::on_saveDataButton_clicked()
         QSettings().setValue("pagesampleddata/lastdir",
                              QFileInfo(fileName).absolutePath());
 
-        QTextStream stream(&file);
-        stream.setCodec("UTF-8");
-
-        // Generate Time axis
-        QVector<double> timeVec;
-        timeVec.resize(fSwVector.size());
-        double prev_t = 0.0;
-        for (int i = 0;i < timeVec.size();i++) {
-            timeVec[i] = prev_t;
-            prev_t += 1.0 / fSwVector[i];
-        }
-
-        stream << "T;I1;I2;I3;V1;V2;V3;I_tot;V_zero;Phase\n";
-
-        for (int i = 0;i < curr1Vector.size();i++) {
-            stream << timeVec.at(i) << ";";
-            stream << curr1Vector.at(i) << ";";
-            stream << curr2Vector.at(i) << ";";
-            stream << curr3Vector.at(i) << ";";
-            stream << ph1Vector.at(i) << ";";
-            stream << ph2Vector.at(i) << ";";
-            stream << ph3Vector.at(i) << ";";
-            stream << currTotVector.at(i) << ";";
-            stream << vZeroVector.at(i) << ";";
-            stream << (double)((quint8)phaseArray.at(i)) / 250.0 * 360.0 << ";";
-
-            if (i < (curr1Vector.size() - 1)) {
-                stream << "\n";
-            }
-        }
-
+        data2Cvs(&file);
         file.close();
     }
 }

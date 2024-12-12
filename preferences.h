@@ -20,6 +20,7 @@
 #ifndef PREFERENCES_H
 #define PREFERENCES_H
 
+
 #include <QDialog>
 #include <QSettings>
 #include <QLabel>
@@ -29,6 +30,13 @@
 #include <QFileSelector>
 #include <QMainWindow>
 
+#ifdef HAS_GAMEPAD
+//#include <QtGamepadLegacy/QGamepad>
+//#include "qgamepad.h"
+#define SDL_MAIN_HANDLED
+#include <SDL2/SDL.h>
+#endif
+
 #include "vescinterface.h"
 #include "widgets/paramtable.h"
 #include "widgets/nrfpair.h"
@@ -37,10 +45,6 @@
 #include "widgets/ppmmap.h"
 #include "widgets/adcmap.h"
 #include "widgets/aspectimglabel.h"
-
-#ifdef HAS_GAMEPAD
-#include <QtGamepad/QGamepad>
-#endif
 
 #include "vescinterface.h"
 
@@ -98,7 +102,8 @@ private:
     QTimer *mTimer;
 
 #ifdef HAS_GAMEPAD
-    QGamepad *mGamepad;
+    //QGamepad *mGamepad;
+    SDL_Joystick *mGamepad;
     bool mUseGamepadControl;
 #endif
 

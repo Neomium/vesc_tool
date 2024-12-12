@@ -198,6 +198,8 @@ MainWindow::MainWindow(QWidget *parent) :
     mycon = QIcon(Utility::getIcon("icons/can_off.png"));
     mycon.addPixmap(Utility::getIcon("icons/can_on.png"), QIcon::Normal, QIcon::On);
     ui->actionCanFwd->setIcon(mycon);
+    mycon.addPixmap(Utility::getIcon("icons/can_on.png"), QIcon::Normal, QIcon::On);
+    ui->actionSaveSetup->setIcon(mycon);
     ui->scanCanButton->setIcon(Utility::getIcon("icons/Refresh-96.png"));
 
     ui->dutyButton->setIcon(Utility::getIcon( "icons/Circled Play-96.png"));
@@ -1080,7 +1082,7 @@ void MainWindow::on_stopButton_clicked()
 {
     mVesc->commands()->setCurrent(0);
     mPageExperiments->stop();
-    ui->actionSendAlive->setChecked(false);
+    //ui->actionSendAlive->setChecked(false);
 }
 
 void MainWindow::on_fullBrakeButton_clicked()
@@ -1956,6 +1958,42 @@ void MainWindow::on_actionCanFwd_triggered()
     } else {
         mVesc->commands()->setSendCan(checked);
     }
+}
+
+void MainWindow::on_actionSaveSetup_triggered()
+{
+
+    if (mVesc && mVesc->isPortConnected()) {
+        mVesc->commands()->sendTerminalCmd("faults");
+    }
+
+        /*
+    QString dirPath = QSettings().value("pagesampleddata/lastdir", "").toString();
+    QString fileName = QFileDialog::getSaveFileName(this,
+                                                    tr("Save CSV"), dirPath,
+                                                    tr("CSV Files (*.csv)"));
+
+    if (!fileName.isEmpty()) {
+        if (!fileName.toLower().endsWith(".csv")) {
+            fileName.append(".csv");
+        }
+
+        QFile file(fileName);
+        if (!file.open(QIODevice::WriteOnly)) {
+            QMessageBox::critical(this, "Save CSV File",
+                                  "Could not open\n" + fileName + "\nfor writing");
+            return;
+        }
+
+        QSettings().setValue("pagesampleddata/lastdir",
+                             QFileInfo(fileName).absolutePath());
+
+        mPageSampledData->data2Cvs(&file);
+        QXmlStreamWriter stream(&file);
+        mVesc->mcConfig()->getXML(stream, "MCConfiguration");
+        file.close();
+    }
+*/
 }
 
 void MainWindow::on_actionSafetyInformation_triggered()

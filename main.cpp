@@ -35,7 +35,6 @@
 #include <QApplication>
 #include <QStyleFactory>
 #include <QSettings>
-#include <QDesktopWidget>
 #include <QFontDatabase>
 #include <QPixmapCache>
 
@@ -162,7 +161,7 @@ int main(int argc, char *argv[])
     // Settings
     QCoreApplication::setOrganizationName("VESC");
     QCoreApplication::setOrganizationDomain("vesc-project.com");
-    QCoreApplication::setApplicationName("VESC Tool");
+    QCoreApplication::setApplicationName("VESC Tool - Neomium Edition");
     QSettings set;
     bool isDark = set.value("darkMode", true).toBool();
     Utility::setDarkMode(isDark);
@@ -227,7 +226,7 @@ int main(int argc, char *argv[])
     // DPI settings
     // TODO: http://www.qcustomplot.com/index.php/support/forum/1344
 
-    QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+    //QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 
 #ifdef HAS_BLUETOOTH
     qmlRegisterType<BleUart>("Vedder.vesc.bleuart", 1, 0, "BleUart");
@@ -268,10 +267,10 @@ int main(int argc, char *argv[])
 
 #ifdef USE_MOBILE
 #ifndef DEBUG_BUILD
-    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    //QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 #else
-    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    //QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
 #ifdef Q_OS_LINUX
     signal(SIGINT, m_cleanup);
@@ -753,14 +752,14 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        QByteArray newFirmware = Utility::removeFirmwareHeader(fIn.readAll());
-        fIn.close();
-
         QFile fOut(fwPackOut);
         if (!fOut.open(QIODevice::WriteOnly)) {
             qWarning() << QString("Could not open %1 for writing.").arg(fwPackOut);
             return 1;
         }
+
+        QByteArray newFirmware = fIn.readAll();
+        fIn.close();
 
         int szTot = newFirmware.size();
 

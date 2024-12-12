@@ -10,7 +10,7 @@ VT_INTRO_VERSION = 1
 VT_CONFIG_VERSION = 4
 
 # Set to 0 for stable versions and to test version number for development versions.
-VT_IS_TEST_VERSION = 2
+VT_IS_TEST_VERSION = 0
 
 # GIT commit
 VT_GIT_COMMIT = $$system(git rev-parse --short=8 HEAD)
@@ -46,7 +46,7 @@ ios: {
 #CONFIG += build_mobile
 
 # Exclude built-in firmwares
-#CONFIG += exclude_fw
+CONFIG += exclude_fw
 
 ios: {
     CONFIG    += build_mobile
@@ -78,8 +78,10 @@ DEFINES += HAS_POS
 !android: {
     # Serial port available
     DEFINES += HAS_SERIALPORT
-    DEFINES += HAS_GAMEPAD
-}
+!macos: {
+     DEFINES += HAS_GAMEPAD
+    }
+  }
 }
 
 win32: {
@@ -109,6 +111,8 @@ QT       += quickcontrols2
 QT       += quickwidgets
 QT       += svg
 QT       += gui-private
+QT += openglwidgets
+QT += core5compat
 
 contains(DEFINES, HAS_SERIALPORT) {
     QT       += serialport
@@ -127,7 +131,17 @@ contains(DEFINES, HAS_POS) {
 }
 
 contains(DEFINES, HAS_GAMEPAD) {
-    QT       += gamepad
+    #QT       += gamepad
+
+# Include paths for SDL2 headers
+INCLUDEPATH += C:\SDL2-2.30.10\x86_64-w64-mingw32/include
+
+# Library paths for SDL2 libraries
+LIBS += -LC:\SDL2-2.30.10\x86_64-w64-mingw32/lib
+
+LIBS += -lSDL2
+CONFIG += static
+
 }
 
 android: QT += androidextras
@@ -228,6 +242,20 @@ SOURCES += main.cpp\
     tcpserversimple.cpp \
     hexfile.cpp
 
+   # qtgamepadlegacy\src\gamepadsrc\qgamepad.cpp \
+   # qtgamepadlegacy\src\gamepadsrc\qgamepadmanager.cpp \
+   # qtgamepadlegacy\src\gamepadsrc\qgamepadbackend.cpp \
+   # qtgamepadlegacy\src\gamepadsrc\qgamepadkeynavigation.cpp \
+   # qtgamepadlegacy\src\gamepadsrc\qgamepadbackend.cpp \
+   # qtgamepadlegacy\src\gamepadsrc\qgamepadbackend.cpp \
+   # qtgamepadlegacy\src\gamepadsrc\moc_qgamepad.cpp \
+   # qtgamepadlegacy\src\gamepadsrc\moc_qgamepadbackend_p.cpp \
+   # qtgamepadlegacy\src\gamepadsrc\moc_qgamepadbackendplugin_p.cpp \
+   # qtgamepadlegacy\src\gamepadsrc\moc_qgamepadmanager.cpp \
+   # qtgamepadlegacy\src\gamepadsrc\qgamepadbackendfactory.cpp \
+   # qtgamepadlegacy\src\gamepadsrc\qgamepadbackendplugin.cpp
+
+
 HEADERS  += mainwindow.h \
     bleuartdummy.h \
     codeloader.h \
@@ -325,7 +353,7 @@ DISTFILES += \
     android/build.gradle \
     android/gradle/wrapper/gradle-wrapper.properties \
     android/src/com/vedder/vesc/VForegroundService.java \
-    android/src/com/vedder/vesc/Utils.java
+    android/src/com/vedder/vesc/Utils.java \
 
 ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android
 

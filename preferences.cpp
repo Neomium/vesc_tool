@@ -66,12 +66,13 @@ Preferences::Preferences(QWidget *parent) :
     ui->darkModeBox->setChecked(Utility::isDarkMode());
 
 #ifdef HAS_GAMEPAD
-    auto confAxis = [](QGamepad *gp, QGamepadManager::GamepadAxis axis) {
+    /* auto confAxis = [](QGamepad *gp, QGamepadManager::GamepadAxis axis) {
         if (gp) {
             QGamepadManager::instance()->configureAxis(gp->deviceId(), axis);
         }
-    };
+    };*/
 
+    /*
     connect(ui->jsConf1Button, &QPushButton::clicked,
             [=]() {confAxis(mGamepad, QGamepadManager::AxisLeftX);});
     connect(ui->jsConf2Button, &QPushButton::clicked,
@@ -80,6 +81,20 @@ Preferences::Preferences(QWidget *parent) :
             [=]() {confAxis(mGamepad, QGamepadManager::AxisRightX);});
     connect(ui->jsConf4Button, &QPushButton::clicked,
             [=]() {confAxis(mGamepad, QGamepadManager::AxisRightY);});
+    */
+
+    connect(ui->jsConf1Button, &QPushButton::clicked, [=]() {
+        ui->jseAxisBox->setCurrentIndex(0);
+    });
+    connect(ui->jsConf2Button, &QPushButton::clicked, [=]() {
+        ui->jseAxisBox->setCurrentIndex(1);
+    });
+    connect(ui->jsConf3Button, &QPushButton::clicked, [=]() {
+        ui->jseAxisBox->setCurrentIndex(2);
+    });
+    connect(ui->jsConf4Button, &QPushButton::clicked, [=]() {
+        ui->jseAxisBox->setCurrentIndex(3);
+    });
 
     if (mSettings.contains("js_is_configured")) {
         ui->jsConfigOkBox->setChecked(mSettings.value("js_is_configured").toBool());
@@ -117,6 +132,8 @@ Preferences::Preferences(QWidget *parent) :
 
     if (mSettings.contains("js_name")) {
         ui->jsListBox->clear();
+
+        /*
         auto gamepads = QGamepadManager::instance()->connectedGamepads();
         for (auto g: gamepads) {
             auto name = QGamepadManager::instance()->gamepadName(g);
@@ -128,7 +145,22 @@ Preferences::Preferences(QWidget *parent) :
                 mGamepad = new QGamepad(g, this);
             }
         }
+        */
+        for (int i = 0; i < SDL_NumJoysticks(); ++i) {
+            const char *name = SDL_JoystickNameForIndex(i);
+            ui->jsListBox->addItem(QString::fromUtf8(name), i);
+
+            if (QString::fromUtf8(name) == mSettings.value("js_name").toString()) {
+                if (mGamepad) {
+                    SDL_JoystickClose(mGamepad);
+                }
+                mGamepad = SDL_JoystickOpen(i);
+            }
+        }
     }
+
+
+
 #endif
 
     ui->uploadContentEditorButton->setChecked(mSettings.value("scripting/uploadContentEditor", true).toBool());
@@ -225,6 +257,7 @@ void Preferences::showEvent(QShowEvent *event)
 void Preferences::timerSlot()
 {
 #ifdef HAS_GAMEPAD
+    /*
     if (mGamepad) {
         ui->jsAxis1Bar->setValue(mGamepad->axisLeftX() * 1000.0);
         ui->jsAxis2Bar->setValue(mGamepad->axisLeftY() * 1000.0);
@@ -309,6 +342,111 @@ void Preferences::timerSlot()
             mGamepad = nullptr;
         }
     }
+*/
+        double ax = 0.0;
+
+        if (mGamepad) {
+            SDL_JoystickUpdate();
+            // Achsenwerte lesen und anzeigen
+            ui->jsAxis1Bar->setValue(SDL_JoystickGetAxis(mGamepad, 0) / 32767.0 * 1000.0);
+            ui->jsAxis2Bar->setValue(SDL_JoystickGetAxis(mGamepad, 1) / 32767.0 * 1000.0);
+            ui->jsAxis3Bar->setValue(SDL_JoystickGetAxis(mGamepad, 2) / 32767.0 * 1000.0);
+            ui->jsAxis4Bar->setValue(SDL_JoystickGetAxis(mGamepad, 3) / 32767.0 * 1000.0);
+
+
+            // Aktuelle Achse auswählen
+            switch (ui->jseAxisBox->currentIndex()) {
+            case 0:
+                ax = SDL_JoystickGetAxis(mGamepad, 0) / 32767.0 * 1000.0;
+                break;
+            case 1:
+                ax = SDL_JoystickGetAxis(mGamepad, 1) / 32767.0 * 1000.0;
+                break;
+            case 2:
+                ax = SDL_JoystickGetAxis(mGamepad, 2) / 32767.0 * 1000.0;
+                break;
+            case 3:
+                ax = SDL_JoystickGetAxis(mGamepad, 3) / 32767.0 * 1000.0;
+                break;
+            }
+        }
+
+        // Achsenwert invertieren, falls ausgewählt
+        if (ui->jsInvertedBox->isChecked()) {
+            ax = -ax;
+        }
+
+        //qDebug() << "axis value:" << ax;
+
+        // Wert auf den gewünschten Bereich skalieren
+        double input = Utility::map(ax,
+                                    ui->jsMinBox->value(), ui->jsMaxBox->value(),
+                                    ui->jsBidirectionalBox->isChecked() ? -1.0 : 0.0, 1.0);
+
+        double range = 0.0;
+        int decimals = 2;
+        QString name = "Undefined";
+        QString unit = "";
+
+        // Kontrolltyp ermitteln und Aktionen ausführen
+        int ctrlt = ui->jsControlTypeBox->currentIndex();
+        if (ctrlt == 0 || ctrlt == 1) {
+            range = input >= 0 ? fabs(ui->jsCurrentMaxBox->value()) : fabs(ui->jsCurrentMinBox->value());
+            input *= range;
+            name = "Current";
+            unit = " A";
+
+            if (mVesc && mUseGamepadControl) {
+                if (ctrlt == 0 || input > 0) {
+                    mVesc->commands()->setCurrent(input);
+                } else {
+                    mVesc->commands()->setCurrentBrake(input);
+                }
+            }
+        } else if (ctrlt == 2) {
+            range = 1.0;
+            input *= range;
+            name = "Duty";
+            unit = "";
+
+            if (mVesc && mUseGamepadControl) {
+                mVesc->commands()->setDutyCycle(input);
+            }
+        } else if (ctrlt == 3) {
+            range = input >= 0 ? fabs(ui->jsErpmMaxBox->value()) : fabs(ui->jsErpmMinBox->value());
+            input *= range;
+            name = "Speed";
+            unit = " ERPM";
+            decimals = 0;
+
+            if (mVesc && mUseGamepadControl) {
+                mVesc->commands()->setRpm(input);
+            }
+        } else if (ctrlt == 4) {
+            range = 360.0;
+            input *= range;
+            name = "Position";
+            unit = " Degrees";
+            decimals = 1;
+
+            if (mVesc && mUseGamepadControl) {
+                mVesc->commands()->setPos(input);
+            }
+        }
+
+        // Werte auf der Benutzeroberfläche anzeigen
+        ui->jsDisp->setRange(range);
+        ui->jsDisp->setUnit(unit);
+        ui->jsDisp->setName(name);
+        ui->jsDisp->setVal(input);
+        ui->jsDisp->setDecimals(decimals);
+
+        // Verbindung überprüfen
+        if (mGamepad && !SDL_JoystickGetAttached(mGamepad)) {
+            SDL_JoystickClose(mGamepad);
+            mGamepad = nullptr;
+        }
+
 #endif
 }
 
@@ -326,9 +464,36 @@ void Preferences::on_jsScanButton_clicked()
 {
 #ifdef HAS_GAMEPAD
     ui->jsListBox->clear();
+    /*
     auto gamepads = QGamepadManager::instance()->connectedGamepads();
     for (auto g: gamepads) {
+        //qDebug(QGamepadManager::instance()->gamepadName(g) );
         ui->jsListBox->addItem(QGamepadManager::instance()->gamepadName(g), g);
+    }
+*/
+    // Anzahl der angeschlossenen Gamecontroller prüfen
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0) {
+        fprintf(stderr, "SDL_Init error: %s\n", SDL_GetError());
+    }
+
+    SDL_JoystickUpdate();
+    qDebug() << "Number of controllers:" << SDL_NumJoysticks();
+    for (int i = 0; i < SDL_NumJoysticks(); ++i) {
+        if (false && SDL_IsGameController(i)) {
+            const char* controllerName = SDL_GameControllerNameForIndex(i);
+            qDebug() << "controller:" << controllerName;
+            if (controllerName) {
+                // Controller in die Liste hinzufügen
+                ui->jsListBox->addItem(QString(controllerName), i);
+            }
+        } else {
+            const char* controllerName = SDL_JoystickNameForIndex(i);
+            qDebug() << "controller:" << controllerName;
+            if (controllerName) {
+                // Controller in die Liste hinzufügen
+                ui->jsListBox->addItem(QString(controllerName), i);
+            }
+        }
     }
 #endif
 }
@@ -336,12 +501,32 @@ void Preferences::on_jsScanButton_clicked()
 void Preferences::on_jsConnectButton_clicked()
 {
 #ifdef HAS_GAMEPAD
-    QVariant item = ui->jsListBox->currentData();
+    /*QVariant item = ui->jsListBox->currentData();
     if (item.isValid()) {
         if (mGamepad) {
             mGamepad->deleteLater();
         }
         mGamepad = new QGamepad(item.toInt(), this);
+    }*/
+
+    QVariant item = ui->jsListBox->currentData();
+    if (item.isValid()) {
+        int controllerIndex = item.toInt();
+
+        // Falls bereits ein Gamecontroller geöffnet ist, schließen
+        if (mGamepad) {
+            SDL_JoystickClose(mGamepad);
+            mGamepad = nullptr;
+        }
+
+        // Neuen Gamecontroller basierend auf dem ausgewählten Index öffnen
+            mGamepad = SDL_JoystickOpen(controllerIndex);
+            if (mGamepad) {
+                qDebug() << "Connected to Gamepad:" << SDL_JoystickName(mGamepad);
+                qDebug() << "Axis:" << SDL_JoystickHasRumble(mGamepad);
+            } else {
+                qDebug() << "Failed to connect to Gamepad at index:" << controllerIndex;
+            }
     }
 #endif
 }
@@ -350,7 +535,9 @@ void Preferences::on_jsResetConfigButton_clicked()
 {
 #ifdef HAS_GAMEPAD
     if (mGamepad) {
-        QGamepadManager::instance()->resetConfiguration(mGamepad->deviceId());
+        //QGamepadManager::instance()->resetConfiguration(mGamepad->deviceId());
+        // todo
+        mGamepad = nullptr;
     }
 #endif
 }
@@ -461,7 +648,8 @@ void Preferences::saveSettingsChanged()
     mSettings.setValue("js_range_min", ui->jsMinBox->value());
     mSettings.setValue("js_range_max", ui->jsMaxBox->value());
     if (mGamepad) {
-        mSettings.setValue("js_name", mGamepad->name());
+        //mSettings.setValue("js_name", mGamepad->name());
+        mSettings.setValue("js_name", SDL_JoystickName(mGamepad));
     }
 #endif
 

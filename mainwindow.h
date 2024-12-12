@@ -141,6 +141,7 @@ private slots:
     void on_actionTerminalPrintThreads_triggered();
     void on_actionTerminalDRVResetLatchedFaults_triggered();
     void on_actionCanFwd_triggered();
+    void on_actionSaveSetup_triggered();
     void on_actionSafetyInformation_triggered();
     void on_actionWarrantyStatement_triggered();
     void on_actionVESCToolChangelog_triggered();

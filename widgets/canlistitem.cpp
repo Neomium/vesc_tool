@@ -64,7 +64,8 @@ CANListItem::CANListItem(FW_RX_PARAMS p,
     setID(ID);
 
     QHBoxLayout *layout = new QHBoxLayout;
-    layout->setMargin(0);
+    //layout->setMargin(0);
+    layout->setContentsMargins(0,0,0,0);
 
     layout->addSpacerItem(mSpaceStart);
     layout->addWidget(mIconLabel);
